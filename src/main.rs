@@ -1,7 +1,6 @@
 use std::f64::consts::PI;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use std::thread;
 use std::time;
 
@@ -12,38 +11,31 @@ const SCREEN_WIDTH: usize = 150;
 const SCREEN_HEIGHT: usize = 40;
 const LUMINANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
-fn main() {
-    let should_exit = Arc::new(AtomicBool::new(false));
+static SHOULD_PLAY: AtomicBool = AtomicBool::new(true);
 
+fn main() {
     let mut signals = Signals::new([SIGINT]).unwrap();
     let handle = signals.handle();
 
-    let thread = {
-        let should_exit = Arc::clone(&should_exit);
-        thread::spawn(move || {
-            for signal in &mut signals {
-                match signal {
-                    SIGINT => should_exit.store(true, Ordering::Relaxed),
-                    _ => unreachable!(),
-                }
+    let thread = thread::spawn(move || {
+        for signal in &mut signals {
+            match signal {
+                SIGINT => SHOULD_PLAY.store(false, Ordering::Relaxed),
+                _ => unreachable!(),
             }
-        })
-    };
+        }
+    });
 
     let pause = time::Duration::from_millis(45);
     let mut a_iter = (0.0..2.0 * PI).by(0.05).cycle();
     let mut b_iter = (0.0..2.0 * PI).by(0.04).cycle();
 
-    loop {
+    while SHOULD_PLAY.load(Ordering::Relaxed) {
         let a = a_iter.next().unwrap();
         let b = b_iter.next().unwrap();
         clear_screen();
         render_frame(a, b);
         thread::sleep(pause);
-
-        if should_exit.load(Ordering::Relaxed) {
-            break;
-        }
     }
 
     handle.close();
