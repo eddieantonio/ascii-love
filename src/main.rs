@@ -7,24 +7,16 @@ const SCREEN_HEIGHT: usize = 40;
 const LUMINANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
 fn main() {
-    let mut a = 0.0;
-    let mut b = 0.0;
     let pause = time::Duration::from_millis(45);
+    let mut a_iter = (0.0..2.0 * PI).by(0.05).cycle();
+    let mut b_iter = (0.0..2.0 * PI).by(0.04).cycle();
 
     loop {
+        let a = a_iter.next().unwrap();
+        let b = b_iter.next().unwrap();
         clear_screen();
         render_frame(a, b);
         thread::sleep(pause);
-
-        a += 0.05;
-        b += 0.03;
-
-        if a > 2.0 * PI {
-            a -= 2.0 * PI;
-        }
-        if b > 2.0 * PI {
-            b -= 2.0 * PI;
-        }
     }
 }
 
@@ -37,10 +29,8 @@ fn render_frame(a: f64, b: f64) {
     let mut output = [[' '; SCREEN_WIDTH]; SCREEN_HEIGHT];
     let mut zbuffer = [[-f64::INFINITY; SCREEN_WIDTH]; SCREEN_HEIGHT];
 
-    let mut u = 0f64;
-    while u < 2.0 * PI {
-        let mut v = 0f64;
-        while v < PI {
+    for u in (0.0..2.0 * PI).by(0.02) {
+        for v in (0.0..PI).by(0.02) {
             // Heart parametric equations
             let x = sin(v) * (15.0 * sin(u) - 4.0 * sin(3.0 * u));
             let y = 8.0 * cos(v);
@@ -104,10 +94,7 @@ fn render_frame(a: f64, b: f64) {
                 let luminance_index = luminance_index.clamp(0, n_lumas as i32) as usize;
                 output[yp][xp] = LUMINANCE[luminance_index];
             }
-
-            v += 0.02;
         }
-        u += 0.02;
     }
 
     print!("\x1b[H");
@@ -122,4 +109,50 @@ fn sin(x: f64) -> f64 {
 }
 fn cos(x: f64) -> f64 {
     x.cos()
+}
+
+#[derive(Clone)]
+struct FloatRangeIter {
+    start: f64,
+    end: f64,
+    step: f64,
+    current: i64,
+    size: i64,
+}
+
+impl Iterator for FloatRangeIter {
+    type Item = f64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current += 1;
+
+        if self.current < self.size {
+            // Linear interpolation
+            let value = self.start + (self.current as f64) * self.step;
+            assert!(value >= self.start);
+            assert!(value < self.end);
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
+trait ToFloatRangeIter {
+    fn by(self, step: f64) -> FloatRangeIter;
+}
+
+impl ToFloatRangeIter for std::ops::Range<f64> {
+    fn by(self, step: f64) -> FloatRangeIter {
+        let std::ops::Range { start, end } = self;
+        let size = (end - start) / step;
+
+        FloatRangeIter {
+            start,
+            end,
+            step,
+            current: 0,
+            size: size as i64,
+        }
+    }
 }
