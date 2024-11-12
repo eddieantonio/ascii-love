@@ -20,11 +20,6 @@ fn main() {
     }
 }
 
-fn clear_screen() {
-    // Cursor Position to top-left
-    print!("\x1b[H");
-}
-
 fn render_frame(a: f64, b: f64) {
     let mut output = [[' '; SCREEN_WIDTH]; SCREEN_HEIGHT];
     let mut zbuffer = [[-f64::INFINITY; SCREEN_WIDTH]; SCREEN_HEIGHT];
@@ -97,18 +92,27 @@ fn render_frame(a: f64, b: f64) {
         }
     }
 
-    print!("\x1b[H");
+    clear_screen();
     for line in output {
         let line: String = line.iter().collect();
         println!("{line}");
     }
+
+    // I would use f64:: these, but I don't believer it's possible because they're primitives.
+    #[inline(always)]
+    fn sin(x: f64) -> f64 {
+        x.sin()
+    }
+
+    #[inline(always)]
+    fn cos(x: f64) -> f64 {
+        x.cos()
+    }
 }
 
-fn sin(x: f64) -> f64 {
-    x.sin()
-}
-fn cos(x: f64) -> f64 {
-    x.cos()
+fn clear_screen() {
+    // Cursor Position to top-left
+    print!("\x1b[H");
 }
 
 #[derive(Clone)]
