@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::thread;
 use std::time;
 
-use signal_hook::consts::{SIGINT, SIGWINCH};
+use signal_hook::consts::{SIGINT, SIGTERM, SIGWINCH};
 use signal_hook::iterator::Signals;
 
 const LUMINANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
@@ -14,13 +14,13 @@ static SCREEN_HEIGHT: AtomicUsize = AtomicUsize::new(40);
 static SHOULD_PLAY: AtomicBool = AtomicBool::new(true);
 
 fn main() {
-    let mut signals = Signals::new([SIGINT, SIGWINCH]).unwrap();
+    let mut signals = Signals::new([SIGINT, SIGTERM, SIGWINCH]).unwrap();
     let handle = signals.handle();
 
     let thread = thread::spawn(move || {
         for signal in &mut signals {
             match signal {
-                SIGINT => SHOULD_PLAY.store(false, Ordering::Relaxed),
+                SIGTERM | SIGINT => stop_animation(),
                 SIGWINCH => update_screen_dimensions(),
                 _ => unreachable!(),
             }
@@ -48,6 +48,10 @@ fn animate() {
         render_frame(a, b);
         thread::sleep(pause);
     }
+}
+
+fn stop_animation() {
+    SHOULD_PLAY.store(false, Ordering::Relaxed)
 }
 
 fn render_frame(a: f64, b: f64) {
