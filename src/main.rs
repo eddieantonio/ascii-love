@@ -1,12 +1,35 @@
 use std::f64::consts::PI;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::thread;
 use std::time;
+
+use signal_hook::consts::SIGINT;
+use signal_hook::iterator::Signals;
 
 const SCREEN_WIDTH: usize = 150;
 const SCREEN_HEIGHT: usize = 40;
 const LUMINANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
 fn main() {
+    let should_exit = Arc::new(AtomicBool::new(false));
+
+    let mut signals = Signals::new([SIGINT]).unwrap();
+    let handle = signals.handle();
+
+    let thread = {
+        let should_exit = Arc::clone(&should_exit);
+        thread::spawn(move || {
+            for signal in &mut signals {
+                match signal {
+                    SIGINT => should_exit.store(true, Ordering::Relaxed),
+                    _ => unreachable!(),
+                }
+            }
+        })
+    };
+
     let pause = time::Duration::from_millis(45);
     let mut a_iter = (0.0..2.0 * PI).by(0.05).cycle();
     let mut b_iter = (0.0..2.0 * PI).by(0.04).cycle();
@@ -17,7 +40,14 @@ fn main() {
         clear_screen();
         render_frame(a, b);
         thread::sleep(pause);
+
+        if should_exit.load(Ordering::Relaxed) {
+            break;
+        }
     }
+
+    handle.close();
+    thread.join().unwrap();
 }
 
 fn render_frame(a: f64, b: f64) {
