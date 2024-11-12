@@ -26,6 +26,13 @@ fn main() {
         }
     });
 
+    animate();
+
+    handle.close();
+    thread.join().unwrap();
+}
+
+fn animate() {
     let pause = time::Duration::from_millis(45);
     let mut a_iter = (0.0..2.0 * PI).by(0.05).cycle();
     let mut b_iter = (0.0..2.0 * PI).by(0.04).cycle();
@@ -37,9 +44,6 @@ fn main() {
         render_frame(a, b);
         thread::sleep(pause);
     }
-
-    handle.close();
-    thread.join().unwrap();
 }
 
 fn render_frame(a: f64, b: f64) {
