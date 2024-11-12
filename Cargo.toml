@@ -1,7 +1,8 @@
 [package]
-name = "heart"
+name = "ascii-love"
 version = "0.1.0"
 edition = "2021"
+license = "mit"
 
 [dependencies]
 signal-hook = "0.3.17"

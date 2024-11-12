@@ -1,3 +1,7 @@
+//! Rust version of https://github.com/T4ras123/ascii-love
+//!
+//! Original author: https://github.com/T4ras123
+
 use std::f64::consts::PI;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
