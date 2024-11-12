@@ -26,7 +26,9 @@ fn main() {
         }
     });
 
+    hide_cursor();
     animate();
+    show_cursor();
 
     handle.close();
     thread.join().unwrap();
@@ -139,6 +141,14 @@ fn render_frame(a: f64, b: f64) {
 fn clear_screen() {
     // Cursor Position to top-left
     print!("\x1b[H");
+}
+
+fn show_cursor() {
+    print!("\x1b[?25h");
+}
+
+fn hide_cursor() {
+    print!("\x1b[?25l");
 }
 
 #[derive(Clone)]
