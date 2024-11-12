@@ -1,31 +1,33 @@
 use std::f64::consts::PI;
-use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::thread;
 use std::time;
 
-use signal_hook::consts::SIGINT;
+use signal_hook::consts::{SIGINT, SIGWINCH};
 use signal_hook::iterator::Signals;
 
-const SCREEN_WIDTH: usize = 150;
-const SCREEN_HEIGHT: usize = 40;
 const LUMINANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
+static SCREEN_WIDTH: AtomicUsize = AtomicUsize::new(150);
+static SCREEN_HEIGHT: AtomicUsize = AtomicUsize::new(40);
 static SHOULD_PLAY: AtomicBool = AtomicBool::new(true);
 
 fn main() {
-    let mut signals = Signals::new([SIGINT]).unwrap();
+    let mut signals = Signals::new([SIGINT, SIGWINCH]).unwrap();
     let handle = signals.handle();
 
     let thread = thread::spawn(move || {
         for signal in &mut signals {
             match signal {
                 SIGINT => SHOULD_PLAY.store(false, Ordering::Relaxed),
+                SIGWINCH => update_screen_dimensions(),
                 _ => unreachable!(),
             }
         }
     });
 
+    update_screen_dimensions();
     hide_cursor();
     animate();
     show_cursor();
@@ -49,8 +51,10 @@ fn animate() {
 }
 
 fn render_frame(a: f64, b: f64) {
-    let mut output = [[' '; SCREEN_WIDTH]; SCREEN_HEIGHT];
-    let mut zbuffer = [[-f64::INFINITY; SCREEN_WIDTH]; SCREEN_HEIGHT];
+    let screen_width = SCREEN_WIDTH.load(Ordering::Relaxed);
+    let screen_height = SCREEN_HEIGHT.load(Ordering::Relaxed);
+    let mut output = vec![vec![' '; screen_width]; screen_height];
+    let mut zbuffer = vec![vec![-f64::INFINITY; screen_width]; screen_height];
 
     for u in (0.0..2.0 * PI).by(0.02) {
         for v in (0.0..PI).by(0.02) {
@@ -73,8 +77,8 @@ fn render_frame(a: f64, b: f64) {
             // Projection
             let z_offset = 70.0;
             let ooz = 1.0 / (z_rot + z_offset);
-            let width = SCREEN_WIDTH as f64;
-            let height = SCREEN_HEIGHT as f64;
+            let width = screen_width as f64;
+            let height = screen_height as f64;
             let xp = (width / 2.0 + x_rot * ooz * width) as usize;
             let yp = (height / 2.0 - y_rot * ooz * height) as usize;
 
@@ -109,7 +113,7 @@ fn render_frame(a: f64, b: f64) {
             let luma = nx_rot * lx + ny_rot * ly + nz_rot * lz;
             let luminance_index = ((luma + 1.0) * 5.5) as i32;
 
-            let within_screen = xp < SCREEN_WIDTH && yp < SCREEN_HEIGHT;
+            let within_screen = xp < screen_width && yp < screen_height;
             let visible = ooz > zbuffer[yp][xp];
             if within_screen && visible {
                 zbuffer[yp][xp] = ooz;
@@ -136,6 +140,15 @@ fn render_frame(a: f64, b: f64) {
     fn cos(x: f64) -> f64 {
         x.cos()
     }
+}
+
+fn update_screen_dimensions() {
+    let Some((width, height)) = term_size::dimensions() else {
+        return;
+    };
+
+    SCREEN_WIDTH.store(width, Ordering::Relaxed);
+    SCREEN_HEIGHT.store(height, Ordering::Relaxed);
 }
 
 fn clear_screen() {
