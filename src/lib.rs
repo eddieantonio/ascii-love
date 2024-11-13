@@ -18,12 +18,11 @@ impl Iterator for FloatRangeIter {
     type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.current += 1;
-
         if self.current < self.size {
             let value = self.start + self.step * (self.current as f64);
             assert!(value >= self.start);
             assert!(value < self.end);
+            self.current += 1;
             Some(value)
         } else {
             None
@@ -43,5 +42,17 @@ impl ToFloatRangeIter for std::ops::Range<f64> {
             current: 0,
             size: size as i64,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic_usage() {
+        let range = (0.0..1.0).by(0.25);
+        let result: Vec<_> = range.collect();
+        assert_eq!(vec![0.0, 0.25, 0.5, 0.75], result);
     }
 }
