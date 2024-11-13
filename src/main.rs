@@ -1,6 +1,4 @@
 //! Rust version of https://github.com/T4ras123/ascii-love
-//!
-//! Original author: https://github.com/T4ras123
 
 use std::f64::consts::PI;
 use std::sync::atomic::Ordering;
@@ -22,7 +20,6 @@ static SHOULD_PLAY: AtomicBool = AtomicBool::new(true);
 fn main() {
     let mut signals = Signals::new([SIGINT, SIGTERM, SIGWINCH]).unwrap();
     let handle = signals.handle();
-
     let thread = thread::spawn(move || {
         for signal in &mut signals {
             match signal {
@@ -44,20 +41,16 @@ fn main() {
 
 fn animate() {
     let pause = time::Duration::from_millis(45);
-    let mut a_iter = (0.0..2.0 * PI).by(0.05).cycle();
-    let mut b_iter = (0.0..2.0 * PI).by(0.04).cycle();
+    let mut a = (0.0..2.0 * PI).by(0.05).cycle();
+    let mut b = (0.0..2.0 * PI).by(0.04).cycle();
 
     while SHOULD_PLAY.load(Ordering::Relaxed) {
-        let a = a_iter.next().unwrap();
-        let b = b_iter.next().unwrap();
+        let a = a.next().unwrap();
+        let b = b.next().unwrap();
         clear_screen();
         render_frame(a, b);
         thread::sleep(pause);
     }
-}
-
-fn stop_animation() {
-    SHOULD_PLAY.store(false, Ordering::Relaxed)
 }
 
 fn render_frame(a: f64, b: f64) {
@@ -150,6 +143,10 @@ fn render_frame(a: f64, b: f64) {
     fn cos(x: f64) -> f64 {
         x.cos()
     }
+}
+
+fn stop_animation() {
+    SHOULD_PLAY.store(false, Ordering::Relaxed)
 }
 
 fn update_screen_dimensions() {
