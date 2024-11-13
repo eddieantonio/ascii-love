@@ -11,6 +11,8 @@ use std::time;
 use signal_hook::consts::{SIGINT, SIGTERM, SIGWINCH};
 use signal_hook::iterator::Signals;
 
+use ascii_love::ToFloatRangeIter;
+
 const LUMINANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
 static SCREEN_WIDTH: AtomicUsize = AtomicUsize::new(150);
@@ -170,50 +172,4 @@ fn show_cursor() {
 
 fn hide_cursor() {
     print!("\x1b[?25l");
-}
-
-#[derive(Clone)]
-struct FloatRangeIter {
-    start: f64,
-    end: f64,
-    step: f64,
-    current: i64,
-    size: i64,
-}
-
-impl Iterator for FloatRangeIter {
-    type Item = f64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.current += 1;
-
-        if self.current < self.size {
-            // Linear interpolation
-            let value = self.start + (self.current as f64) * self.step;
-            assert!(value >= self.start);
-            assert!(value < self.end);
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
-
-trait ToFloatRangeIter {
-    fn by(self, step: f64) -> FloatRangeIter;
-}
-
-impl ToFloatRangeIter for std::ops::Range<f64> {
-    fn by(self, step: f64) -> FloatRangeIter {
-        let std::ops::Range { start, end } = self;
-        let size = (end - start) / step;
-
-        FloatRangeIter {
-            start,
-            end,
-            step,
-            current: 0,
-            size: size as i64,
-        }
-    }
 }
